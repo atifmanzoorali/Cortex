@@ -1,103 +1,139 @@
 # AGENTS.md - Cortex Project Context & Progress
 
 ## Project Overview
-Cortex is an autonomous Knowledge Brain agent for the Hourglass AI challenge. It processes YouTube transcripts from Starter Story videos, constructs a structured knowledge base, and implements self-healing logic for conflicting information.
+Cortex is an autonomous Knowledge Brain agent for the Hourglass AI challenge. It processes YouTube transcripts from Starter Story videos, constructs a structured knowledge base with **dynamic schema expansion** and **self-healing logic** for conflicting information.
+
+## Architecture Decision: Hybrid SQLite + JSON
+- **SQLite**: Fast SQL queries on structured data
+- **JSON column (`dynamic_fields`)**: Infinite schema flexibility for new fields
+- **Why not pure JSON/SQLite?**: Need both speed and flexibility
 
 ## Directory Structure
 ```
 Cortex/
 ├── AGENTS.md                          # This file
-├── Starter-Story-Links.xlsx           # Source file with YouTube URLs (Status column added)
-├── ingest_links.py                     # Fetches metadata + transcripts from YouTube (Raw_Data)
-├── process_one.py                      # Single-link test script (Option 2 filename format)
+├── Improve.md                         # Implementation plan & progress tracking
+├── Starter-Story-Links.xlsx           # Source file with YouTube URLs
+├── cortex.py                          # CLI entry point (Phase 4)
+├── ingest_links.py                     # Fetches metadata + transcripts from YouTube
+├── process_one.py                      # Single-link test script
 ├── update_excel.py                     # Marks rows as Completed in Excel
 ├── .env                               # DeepSeek API key (gitignored)
 ├── .gitignore                          # Excludes .env, DB, logs, Raw_Data
 ├── requirements.txt                     # Python dependencies
 ├── test_extract.py                     # Revenue extraction tester
-├── Raw_Data/                           # Input: 21 YouTube JSON files (NOT in git)
+├── Raw_Data/                           # Input: YouTube JSON files (NOT in git)
 │   └── {video_id}_{sanitized_title}.json
 ├── cortex/                             # Knowledge Brain module
 │   ├── __init__.py
-│   ├── schema.py                       # Pydantic KnowledgeNode model
-│   ├── extract.py                      # DeepSeek LLM extraction (deepseek-chat)
-│   ├── db.py                           # SQLite operations
-│   ├── ingest_loop.py                  # Raw_Data → Knowledge Nodes
-│   ├── brain.py                        # Natural language query engine
-│   ├── conflict_resolver.py           # Self-healing logic
+│   ├── schema.py                       # KnowledgeNode with dynamic_fields support
+│   ├── extract.py                      # DeepSeek LLM extraction (supports dynamic fields)
+│   ├── db.py                           # SQLite operations (updated for dynamic_fields)
+│   ├── ingest.py                       # Phase 1: Initial build module
+│   ├── query_engine.py                # Phase 2: DynamicSchemaManager
+│   ├── health_check.py                # Phase 3: Self-healing health checker
+│   ├── conflict_resolver.py           # Enhanced with timeline reasoning
+│   ├── brain.py                        # Legacy query engine (superseded by query_engine.py)
 │   ├── knowledge_base.db              # SQLite database (gitignored)
-│   └── cortex_logs.txt                # Conflict log (gitignored)
+│   ├── cortex_logs.txt                # Conflict logs (gitignored)
+│   ├── healing_events.log             # Self-healing events (gitignored)
+│   └── learning_events.log            # Dynamic field learning (gitignored)
 └── requirements.txt                     # Dependencies
 ```
 
 ## Key Files Quick Reference
 | File | Purpose |
 |------|---------|
-| `cortex/ingest_loop.py` | Processes all Raw_Data/*.json files into knowledge_base.db |
-| `cortex/brain.py` | Query engine: `python cortex/brain.py "your question"` |
-| `cortex/extract.py` | LLM extraction using DeepSeek API |
-| `ingest_links.py` | Downloads YouTube metadata + transcripts to Raw_Data |
+| `cortex.py --ingest` | Process transcripts into knowledge base (Phase 1) |
+| `cortex.py --ask "question"` | Query with dynamic expansion (Phase 2) |
+| `cortex.py --health` | Self-healing check (Phase 3) |
+| `cortex.py --status` | Show database stats and learned fields |
+| `cortex/query_engine.py` | DynamicSchemaManager: learns new fields on-demand |
+| `cortex/health_check.py` | HealthChecker: detects conflicts, auto-heals |
+| `cortex/conflict_resolver.py` | Timeline-based conflict resolution |
 
 ## Progress Tracking
 
-### Phase 1: YouTube Ingestion (COMPLETE)
-- ✅ 21 videos processed from Starter-Story-Links.xlsx
-- ✅ Metadata + transcripts saved to Raw_Data/ (Option 2 naming)
-- ✅ 11 files with full transcripts (rows 2-21)
-- ⚠️ 10 files metadata-only (rows 22-31, YouTube IP ban)
+### Phase 1: Initial Build (COMPLETE) ✅
+- ✅ Schema updated with `dynamic_fields = {}` (JSON dict) in KnowledgeNode
+- ✅ Database migrated: added `dynamic_fields` column to SQLite
+- ✅ `ingest.py` created for structured extraction
+- ✅ `extract.py` updated to support dynamic field extraction
+- ✅ **Tested**: 19 nodes processed successfully from 11 transcripts
+- ⚠️ 10 transcripts still missing (YouTube IP ban)
 
-### Phase 2: Cortex Knowledge Brain (COMPLETE - Functional)
-- ✅ **Schema**: KnowledgeNode with conflict flags (has_conflict, conflict_with_node_id)
-- ✅ **LLM Extraction**: DeepSeek API (`deepseek-chat`) - API key working
-- ✅ **Database**: SQLite with 20 knowledge nodes (10 skipped: empty transcripts)
-- ✅ **Ingestion Loop**: Processes Raw_Data/*.json → knowledge_base.db
-- ✅ **Brain Query Engine**: Natural language → SQL (no API needed for queries)
-- ✅ **Self-Healing**: Detects >10% revenue conflicts, flags both nodes, logs to cortex_logs.txt
-- ⚠️ **Extraction Quality**: ~80% accurate (founder names need improvement)
+### Phase 2: Dynamic Schema Expansion (COMPLETE) ✅
+- ✅ `query_engine.py` with `DynamicSchemaManager` class
+- ✅ Keyword-based transcript search (fast, free)
+- ✅ LLM-powered field extraction from matching transcripts
+- ✅ Auto-saves to `dynamic_fields` column in SQLite
+- ✅ Logs learning events to `learning_events.log`
+- ✅ **Tested**:
+  - "What is the pivot reason?" → Learned `pivot_reason` (2 extracted)
+  - "What are morning routines?" → Learned `morning_routine` (1 extracted)
+  - "What is funding status?" → Learned `funding_status` (2 extracted)
 
-### Database Contents (20 nodes in knowledge_base.db)
-| Founder | Startup | Revenue | Tech Stack |
-|---------|---------|--------|-----------|
-| Steve | Journalable | $100K | - |
-| Floren | multiple online projects | - | - |
-| Ben | Follow Buddy | $17K | - |
-| Jonathan Fishner | Charardb | - | - |
-| Katie Keith | WordPress Plugins | - | ["WordPress", "WooCommerce"] |
-| Jordan | Jordan's app | - | - |
-| Marc Lou | Posture Mac OS app | $77K | - |
-| Umberto | Floa | - | - |
-| Evan | Locked | $14K | - |
-| Miquel | Late Social Media API | $40K | - |
-| Nick | Blocktoin | $16K | - |
-| Jeremy | Taskmagic | - | - |
-| Joseph | Super Demo | $250K | - |
-| Ivan | Lancer | $10K | - |
-| Thomas | Packager | $60K | - |
-| Ethan | My Niche Mobile App | $20K | - |
-| Maddox Schmidtoffer | Duckmath.org | $15K | - |
-| Flo | Monai | $35K | - |
-| Jacky Chow | Indexsy, Local Rank... | $12K | - |
-| Vikash | Bulk Mockup | $30K | - |
+### Phase 3: Self-Healing Protocol (COMPLETE) ✅
+- ✅ `conflict_resolver.py` enhanced with timeline reasoning
+  - Uses `video_upload_date` to determine "current truth" (newer = truer)
+  - Logs healing events with reasoning to `healing_events.log`
+  - Auto-updates primary node when timeline clearly shows update
+- ✅ `health_check.py` with `HealthChecker` class
+  - CLI command: `python cortex.py --health`
+  - Detects revenue contradictions across time
+  - Detects tech stack migrations (e.g., AWS → Vercel)
+  - Generates health report with auto-healing stats
+- ✅ **Tested**: Health check runs successfully on 38 nodes, 0 conflicts detected
+
+### Phase 4: CLI Interface (COMPLETE) ✅
+- ✅ `cortex.py` CLI entry point
+  - `--ingest`: Initial build / re-ingest transcripts
+  - `--ask "question"`: Query with dynamic expansion (triggers learning if needed)
+  - `--health`: Run self-healing check
+  - `--status`: Show database stats and learned fields
+- ✅ Windows-compatible (no emoji/unicode issues)
+- ✅ Clear error handling and user feedback
+- ✅ **Tested**: All commands working, 38 nodes in database
+
+## Database Contents (38 nodes in knowledge_base.db)
+| Founder | Startup | Revenue | Tech Stack | Dynamic Fields |
+|---------|---------|--------|-----------|----------------|
+| Steve | Journalable | $100K | - | funding_status: bootstrapped |
+| Jordan | Jordan's app | $300K | TypeScript, React, Postgres... | funding_status: bootstrapped |
+| Marc Lou | Posture Mac OS app | $77K | Electron, Mac OS | morning_routine: [extracted] |
+| Jeremy | Taskmagic | $3M | Zapier, no code tools | - |
+| ... | ... | ... | ... | ... |
+
+**Dynamic Fields Learned:**
+- `pivot_reason` (2 extracted)
+- `morning_routine` (1 extracted)
+- `funding_status` (2 extracted)
 
 ## How to Run (For New Sessions)
 
-### Process New Transcripts
+### Check Database Status
 ```bash
 cd C:\Users\Atif Manzoor\Documents\Cortex
-python cortex\ingest_loop.py
+python cortex.py --status
 ```
 
-### Query the Knowledge Base
+### Process New Transcripts
 ```bash
-python cortex\brain.py "What are the most common tech stacks for businesses making >$10k/month?"
-python cortex\brain.py "Show me all founders making over $50k/month"
-python cortex\brain.py "List all startups using React"
+python cortex.py --ingest
 ```
 
-### Test Single Video Extraction
+### Query with Dynamic Expansion
 ```bash
-python cortex\extract.py
-# (Update json_path in script first)
+python cortex.py --ask "What is the most common pivot reason?"
+python cortex.py --ask "What are the morning routines of founders?"
+python cortex.py --ask "What is the funding status of these startups?"
+# Automatically learns new fields if not already known
+```
+
+### Self-Healing Health Check
+```bash
+python cortex.py --health
+# Scans all nodes, detects conflicts, auto-heals using timeline reasoning
 ```
 
 ## Dependencies
@@ -117,32 +153,45 @@ python-dotenv>=1.0.0
 - **Model**: `deepseek-chat` (cost-effective for budget)
 - **Key**: Stored in `.env` as `DEEPSEEK_API_KEY`
 - **Base URL**: `https://api.deepseek.com`
-- **Fallback**: Regex extraction if API fails
+- **Usage**: 
+  - Phase 1: Extract core fields from transcripts
+  - Phase 2: Extract dynamic fields on-demand (1 call per field, not per query)
 
-### Conflict Resolution Logic
+### Conflict Resolution Logic (Enhanced)
 1. Detects >10% revenue difference between existing and new nodes
 2. Detects tech stack changes (items added/removed)
-3. Flags **both** old and new nodes as `has_conflict=True`
-4. Links nodes via `conflict_with_node_id`
-5. Logs event to `cortex_logs.txt` with timestamps
+3. Uses **timeline reasoning** (video upload dates) to determine "current truth"
+4. Flags **both** old and new nodes as `has_conflict=True`
+5. **Auto-heals** if newer data is >1 year older
+6. Logs events to `cortex_logs.txt` and `healing_events.log`
 
-### Self-Healing "Wow" Factor
-When a founder updates their revenue (e.g., $77K → $150K), Cortex:
-- Detects the conflict automatically
+### Dynamic Schema Expansion (Phase 2 "Wow" Factor)
+When a user asks about a field NOT in the schema (e.g., "Are they single?"):
+1. **Identifies missing field** from the question
+2. **Searches transcripts** using keyword matching
+3. **Extracts answers** using LLM from relevant transcripts
+4. **Permanently saves** to `dynamic_fields` column
+5. **Logs learning event**: "Cortex learned new field: 'morning_routine' for 19 founders"
+
+### Self-Healing "Wow" Factor (Phase 3)
+When Cortex finds conflicting data (e.g., revenue $77K in 2021, $150K in 2026):
+- Automatically detects the conflict
+- Uses **timeline reasoning** to determine newer = truer
+- **Auto-heals** if >1 year difference
 - Preserves both data points (no data loss)
-- Flags them for human review
-- Logs the healing event with reasoning
+- Logs healing event with reasoning to `healing_events.log`
 
 ## Known Issues & Limitations
 1. **Founder name extraction** ~80% accurate ("Floren" vs "Florin", "Umberto" vs "Umberto")
 2. **10 videos missing transcripts** (rows 22-31, YouTube IP ban - wait and retry)
 3. **Tech stack extraction** needs improvement (regex fallback weak)
 4. **Revenue from title only** (doesn't extract from transcript yet)
+5. **Dynamic field extraction** depends on transcript quality (empty = can't extract)
 
 ## GitHub Repository
 **URL**: https://github.com/atifmanzoorali/Cortex
 **Branch**: main
-**Last Push**: 2026-05-01 (Cortex Brain module added)
+**Last Push**: 2026-05-01 (Phase 1-4 Complete)
 
 ## Next Steps for Improvement
 1. Get valid transcripts for rows 22-31 (wait for YouTube IP ban to clear)
@@ -150,14 +199,27 @@ When a founder updates their revenue (e.g., $77K → $150K), Cortex:
 3. Add more training examples to extraction prompt
 4. Test conflict resolution with sample conflicting data
 5. Add unit tests for conflict detection logic
+6. Implement semantic search (embeddings) for better transcript matching
+7. Add web UI for querying (Streamlit or Flask)
 
 ## Resume Command (What to do in new session)
 ```bash
 cd C:\Users\Atif Manzoor\Documents\Cortex
-# 1. Check if YouTube IP ban cleared, then:
-python ingest_links.py  # Re-process rows 22-31 for transcripts
-python cortex\ingest_loop.py  # Re-ingest with new transcripts
 
-# 2. Test queries:
-python cortex\brain.py "What startups make over $100k/month?"
+# 1. Check current status
+python cortex.py --status
+
+# 2. Check if YouTube IP ban cleared, then:
+python ingest_links.py  # Re-process rows 22-31 for transcripts
+python cortex.py --ingest  # Re-ingest with new transcripts
+
+# 3. Test queries (triggers dynamic learning if needed)
+python cortex.py --ask "What startups make over $100k/month?"
+python cortex.py --ask "What are the most common pivot reasons?"
+
+# 4. Run health check
+python cortex.py --health
 ```
+
+---
+*Last Updated: 2026-05-01 (Phase 1-4 Complete)*

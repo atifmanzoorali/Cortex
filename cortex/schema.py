@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 class KnowledgeNode(BaseModel):
@@ -16,3 +16,4 @@ class KnowledgeNode(BaseModel):
     has_conflict: bool = False
     conflict_with_node_id: Optional[str] = None
     created_at: str = datetime.now().isoformat()
+    dynamic_fields: Dict[str, Any] = {}  # Flexible field storage

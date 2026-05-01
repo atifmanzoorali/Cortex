@@ -20,21 +20,28 @@ def init_db():
             timestamp TEXT,
             has_conflict INTEGER DEFAULT 0,
             conflict_with_node_id TEXT,
-            created_at TEXT
+            created_at TEXT,
+            dynamic_fields TEXT DEFAULT '{}'
         )
     """)
+    # Add dynamic_fields column if it doesn't exist (migration for existing DB)
+    try:
+        conn.execute("ALTER TABLE knowledge_nodes ADD COLUMN dynamic_fields TEXT DEFAULT '{}'")
+    except:
+        pass  # Column already exists
     conn.commit()
     conn.close()
 
 def insert_node(node: KnowledgeNode):
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""
-        INSERT INTO knowledge_nodes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+        INSERT INTO knowledge_nodes VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """, (
         node.node_id, node.video_id, node.founder_name, node.startup_name,
         json.dumps(node.tech_stack), node.revenue_amount, node.revenue_frequency,
         node.revenue_currency, json.dumps(node.key_lessons), node.timestamp,
-        1 if node.has_conflict else 0, node.conflict_with_node_id, node.created_at
+        1 if node.has_conflict else 0, node.conflict_with_node_id, node.created_at,
+        json.dumps(node.dynamic_fields)
     ))
     conn.commit()
     conn.close()
@@ -48,6 +55,14 @@ def find_existing(founder_name: str, startup_name: str):
     row = cursor.fetchone()
     conn.close()
     return row
+
+def get_all_nodes():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.execute("SELECT * FROM knowledge_nodes")
+    rows = cursor.fetchall()
+    columns = [desc[0] for desc in cursor.description]
+    conn.close()
+    return rows, columns
 
 def flag_conflict(node_id: str, conflict_with_id: str):
     conn = sqlite3.connect(DB_PATH)

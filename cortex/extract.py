@@ -10,7 +10,7 @@ from openai import OpenAI
 API_KEY = 'sk-a3b5eb71e73f4561aa3b1d439fc4a2ed'
 client = OpenAI(api_key=API_KEY, base_url="https://api.deepseek.com")
 
-def extract_knowledge(json_path: str) -> KnowledgeNode:
+def extract_knowledge(json_path: str, fields_to_extract: list = None) -> KnowledgeNode:
     with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
@@ -22,6 +22,12 @@ def extract_knowledge(json_path: str) -> KnowledgeNode:
     
     if not transcript:
         raise ValueError("Empty transcript")
+    
+    # Build dynamic prompt based on fields needed
+    dynamic_fields_prompt = ""
+    if fields_to_extract:
+        field_list = ', '.join(fields_to_extract)
+        dynamic_fields_prompt = f'\n  "dynamic_fields": {{"field_name": "value"}} // Extract these fields if available: {field_list}'
     
     # Use LLM for everything - simpler and more reliable
     prompt = f"""Extract the following from this YouTube video data. Return ONLY valid JSON.
@@ -39,7 +45,7 @@ Extract and return JSON:
   "tech_stack": ["list", "of", "technologies"],
   "revenue_amount": 77000,
   "revenue_frequency": "monthly",
-  "key_lessons": ["lesson 1", "lesson 2", "lesson 3"]
+  "key_lessons": ["lesson 1", "lesson 2", "lesson 3"]{dynamic_fields_prompt}
 }}
 
 JSON output:"""
@@ -54,6 +60,8 @@ JSON output:"""
             )
             result = json.loads(response.choices[0].message.content)
             
+            dynamic_fields = result.get('dynamic_fields', {})
+            
             return KnowledgeNode(
                 node_id=str(uuid.uuid4()),
                 video_id=video_id,
@@ -66,7 +74,8 @@ JSON output:"""
                 key_lessons=result.get('key_lessons', []),
                 timestamp=metadata.get('upload_date', ''),
                 has_conflict=False,
-                conflict_with_node_id=None
+                conflict_with_node_id=None,
+                dynamic_fields=dynamic_fields
             )
         except Exception as e:
             if attempt == 2:
