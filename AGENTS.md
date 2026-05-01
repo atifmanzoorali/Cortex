@@ -114,14 +114,14 @@ pip install yt-dlp openpyxl youtube-transcript-api
 - yt-dlp used for metadata, youtube-transcript-api for transcripts
 - Excel reading: openpyxl, starts from row 2 (row 1 is header)
 
-## Cortex Brain Module (NEW - Added 2026-05-01)
+## Cortex Brain Module (Complete - 2026-05-01)
 
 ### Structure
 ```
 cortex/
 ├── __init__.py
-├── schema.py          # Pydantic models (KnowledgeNode, RevenueMetrics)
-├── extract.py         # LLM extraction (DeepSeek) + fallback regex
+├── schema.py          # Pydantic models (KnowledgeNode)
+├── extract.py         # DeepSeek LLM extraction (deepseek-chat)
 ├── db.py              # SQLite operations
 ├── ingest_loop.py     # Raw_Data → Knowledge Nodes
 ├── brain.py           # Natural language query engine
@@ -130,20 +130,51 @@ cortex/
 └── cortex_logs.txt    # Conflict log (gitignored)
 ```
 
-### Status
-- ✅ Schema designed (flattened revenue fields for SQLite)
-- ✅ Extraction logic (DeepSeek API + fallback regex)
-- ✅ SQLite database initialized
-- ✅ Ingestion loop (20/21 files processed, 10 skipped - empty transcripts)
-- ✅ Brain query engine (natural language → SQL)
-- ✅ Conflict resolver (detects >10% revenue diff, flags both nodes)
-- ⚠️ **DeepSeek API key invalid** — extraction quality poor (regex fallback only)
-- ⚠️ Needs valid API key for demo-quality extraction
+### Status - WORKING
+- ✅ Schema designed (KnowledgeNode with conflict flags)
+- ✅ LLM extraction (DeepSeek API `deepseek-chat` - API key working)
+- ✅ SQLite database (20 nodes inserted, 10 skipped with empty transcripts)
+- ✅ Ingestion loop (processes Raw_Data/*.json files)
+- ✅ Brain query engine (natural language → SQL conversion)
+- ✅ Conflict resolver (detects >10% revenue diff, flags both nodes, logs to cortex_logs.txt)
+- ✅ Revenue extraction working (Marc Lou $77K, Ben $17K, etc.)
+- ⚠️ Founder name extraction ~80% accurate ("Floren" vs "Florin", etc.)
+- ⚠️ 10 files skipped (rows 22-31 had empty transcripts due to YouTube IP ban)
+
+### Database Contents (20 nodes)
+| Founder | Startup | Revenue |
+|---------|---------|---------|
+| Steve | Journalable | $100K |
+| Floren | multiple online projects | - |
+| Ben | Follow Buddy | $17K |
+| Jonathan Fishner | Charardb | - |
+| Katie Keith | WordPress Plugins | - |
+| Jordan | Jordan's app | - |
+| Marc Lou | Posture Mac OS app | $77K |
+| Umberto | Floa | - |
+| Evan | Locked | $14K |
+| Miquel | Late Social Media API | $40K |
+| Nick | Blocktoin | $16K |
+| Jeremy | Taskmagic | - |
+| Joseph | Super Demo | $250K |
+| Ivan | Lancer | $10K |
+| Thomas | Packager | $60K |
+| Ethan | Cut Coach | $20K |
+| Maddox Schmidtoffer | Duckmath.org | $15K |
+| Flo | Monai | $35K |
+| Jacky Chow | Indexsy, Local Rank... | $12K |
+| Vikash | Bulk Mockup | $30K |
+
+### Query Examples
+```bash
+python cortex/brain.py "What are the most common tech stacks for businesses making >$10k/month?"
+python cortex/brain.py "Show me all founders making over $50k/month"
+python cortex/brain.py "List all startups using React"
+```
 
 ### Resume Command
 ```bash
 cd C:\Users\Atif Manzoor\Documents\Cortex
-# Fix API key in .env, then:
+# Fix missing transcripts (rows 22-31), then:
 python cortex/ingest_loop.py
-python cortex/brain.py "What are the most common tech stacks for businesses making >$10k/month?"
 ```
