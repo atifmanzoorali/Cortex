@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 
+
 class KnowledgeNode(BaseModel):
     node_id: str
     video_id: str

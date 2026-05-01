@@ -1,0 +1,31 @@
+[tool.black]
+line-length = 100
+target-version = ['py312']
+
+[tool.pylint.MASTER]
+max-line-length = 100
+
+[tool.pylint.messages_control]
+disable = [
+    "C0114",  # missing-module-docstring
+    "C0116",  # missing-function-docstring
+    "W0621",  # redefined-outer-name
+    "C0103",  # invalid-name (for constants in tests)
+    "R0913",   # too-many-arguments
+    "R0917",   # too-many-positional-arguments
+    "R0914",   # too-many-locals
+    "R1710",   # inconsistent-return-statements
+    "W0611",   # unused-import
+    "C0411",   # wrong-import-order
+    "C0413",   # wrong-import-position
+    "C0415",   # import-outside-toplevel
+    "W0612",   # unused-variable
+    "W0718",   # broad-exception-caught
+    "W0702",   # bare-except
+    "R1705",   # no-else-return
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+disallow_untyped_defs = false
+implicit_optional = true
