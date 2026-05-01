@@ -114,10 +114,36 @@ pip install yt-dlp openpyxl youtube-transcript-api
 - yt-dlp used for metadata, youtube-transcript-api for transcripts
 - Excel reading: openpyxl, starts from row 2 (row 1 is header)
 
-## Resume Command
-To continue where we left off (retry transcripts for 22-31):
+## Cortex Brain Module (NEW - Added 2026-05-01)
+
+### Structure
+```
+cortex/
+├── __init__.py
+├── schema.py          # Pydantic models (KnowledgeNode, RevenueMetrics)
+├── extract.py         # LLM extraction (DeepSeek) + fallback regex
+├── db.py              # SQLite operations
+├── ingest_loop.py     # Raw_Data → Knowledge Nodes
+├── brain.py           # Natural language query engine
+├── conflict_resolver.py # Self-healing logic
+├── knowledge_base.db  # SQLite database (gitignored)
+└── cortex_logs.txt    # Conflict log (gitignored)
+```
+
+### Status
+- ✅ Schema designed (flattened revenue fields for SQLite)
+- ✅ Extraction logic (DeepSeek API + fallback regex)
+- ✅ SQLite database initialized
+- ✅ Ingestion loop (20/21 files processed, 10 skipped - empty transcripts)
+- ✅ Brain query engine (natural language → SQL)
+- ✅ Conflict resolver (detects >10% revenue diff, flags both nodes)
+- ⚠️ **DeepSeek API key invalid** — extraction quality poor (regex fallback only)
+- ⚠️ Needs valid API key for demo-quality extraction
+
+### Resume Command
 ```bash
 cd C:\Users\Atif Manzoor\Documents\Cortex
-python ingest_links.py
+# Fix API key in .env, then:
+python cortex/ingest_loop.py
+python cortex/brain.py "What are the most common tech stacks for businesses making >$10k/month?"
 ```
-(Make sure `ingest_links.py` has `if 22 <= i <= 31:`)

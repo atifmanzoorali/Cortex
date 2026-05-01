@@ -21,3 +21,8 @@ Desktop.ini
 
 # Excel temp files
 ~$*.xlsx
+
+# Cortex-specific
+.env
+cortex/knowledge_base.db
+cortex/cortex_logs.txt
