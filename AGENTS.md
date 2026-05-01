@@ -1,180 +1,163 @@
-# AGENTS.md - Project Context & Progress
+# AGENTS.md - Cortex Project Context & Progress
 
 ## Project Overview
-Automated ingestion system for Starter Story YouTube videos. Downloads metadata + transcripts and saves as JSON files.
+Cortex is an autonomous Knowledge Brain agent for the Hourglass AI challenge. It processes YouTube transcripts from Starter Story videos, constructs a structured knowledge base, and implements self-healing logic for conflicting information.
 
 ## Directory Structure
 ```
 Cortex/
-├── AGENTS.md                    # This file
-├── Starter-Story-Links.xlsx    # Source file with YouTube URLs (Status column added)
-├── ingest_links.py              # Main processing script (processes range of rows)
-├── process_one.py               # Single-link test script with Option 2 filename format
-├── update_excel.py              # Marks rows as Completed in Excel
-└── Raw_Data/                    # Output folder for JSON files
-    └── {video_id}_{sanitized_title}.json
+├── AGENTS.md                          # This file
+├── Starter-Story-Links.xlsx           # Source file with YouTube URLs (Status column added)
+├── ingest_links.py                     # Fetches metadata + transcripts from YouTube (Raw_Data)
+├── process_one.py                      # Single-link test script (Option 2 filename format)
+├── update_excel.py                     # Marks rows as Completed in Excel
+├── .env                               # DeepSeek API key (gitignored)
+├── .gitignore                          # Excludes .env, DB, logs, Raw_Data
+├── requirements.txt                     # Python dependencies
+├── test_extract.py                     # Revenue extraction tester
+├── Raw_Data/                           # Input: 21 YouTube JSON files (NOT in git)
+│   └── {video_id}_{sanitized_title}.json
+├── cortex/                             # Knowledge Brain module
+│   ├── __init__.py
+│   ├── schema.py                       # Pydantic KnowledgeNode model
+│   ├── extract.py                      # DeepSeek LLM extraction (deepseek-chat)
+│   ├── db.py                           # SQLite operations
+│   ├── ingest_loop.py                  # Raw_Data → Knowledge Nodes
+│   ├── brain.py                        # Natural language query engine
+│   ├── conflict_resolver.py           # Self-healing logic
+│   ├── knowledge_base.db              # SQLite database (gitignored)
+│   └── cortex_logs.txt                # Conflict log (gitignored)
+└── requirements.txt                     # Dependencies
 ```
 
-## Output Format (Option 2 Naming)
-- **Filename**: `{video_id}_{sanitized_title}.json`
-- **Sanitization**: Removes invalid chars (`\/*?:"<>|`), replaces spaces with underscores, truncates to 50 chars
-- **JSON Structure**:
-  ```json
-  {
-    "video_id": "abc123",
-    "metadata": {
-      "title": "...",
-      "description": "...",
-      "duration": 1234,
-      "channel": "Starter Story",
-      "view_count": 12345,
-      "upload_date": "20260426",
-      "tags": [],
-      "thumbnail": "https://...",
-      "categories": ["People & Blogs"]
-    },
-    "transcript": "Full transcript text here..."
-  }
-  ```
+## Key Files Quick Reference
+| File | Purpose |
+|------|---------|
+| `cortex/ingest_loop.py` | Processes all Raw_Data/*.json files into knowledge_base.db |
+| `cortex/brain.py` | Query engine: `python cortex/brain.py "your question"` |
+| `cortex/extract.py` | LLM extraction using DeepSeek API |
+| `ingest_links.py` | Downloads YouTube metadata + transcripts to Raw_Data |
 
 ## Progress Tracking
 
-### Excel File Status (Starter-Story-Links.xlsx)
-- **Column A**: Video Links (YouTube URLs)
-- **Column B**: Status ("Completed" or error message)
-- **Total URLs**: Check Excel for current count
+### Phase 1: YouTube Ingestion (COMPLETE)
+- ✅ 21 videos processed from Starter-Story-Links.xlsx
+- ✅ Metadata + transcripts saved to Raw_Data/ (Option 2 naming)
+- ✅ 11 files with full transcripts (rows 2-21)
+- ⚠️ 10 files metadata-only (rows 22-31, YouTube IP ban)
 
-### Processed Rows
+### Phase 2: Cortex Knowledge Brain (COMPLETE - Functional)
+- ✅ **Schema**: KnowledgeNode with conflict flags (has_conflict, conflict_with_node_id)
+- ✅ **LLM Extraction**: DeepSeek API (`deepseek-chat`) - API key working
+- ✅ **Database**: SQLite with 20 knowledge nodes (10 skipped: empty transcripts)
+- ✅ **Ingestion Loop**: Processes Raw_Data/*.json → knowledge_base.db
+- ✅ **Brain Query Engine**: Natural language → SQL (no API needed for queries)
+- ✅ **Self-Healing**: Detects >10% revenue conflicts, flags both nodes, logs to cortex_logs.txt
+- ⚠️ **Extraction Quality**: ~80% accurate (founder names need improvement)
 
-| Rows | Status | Transcripts | Notes |
-|------|--------|-------------|-------|
-| 2 | ✅ Completed | ✅ Full (10,121 chars) | D4fkiQfzw_I - Test run |
-| 3-6 | ✅ Completed | ✅ Full | 4 links processed |
-| 7-11 | ✅ Completed | ✅ Full | 5 links processed |
-| 12-21 | ✅ Completed | ✅ Full | 10 links processed |
-| 22-31 | ⚠️ Metadata Only | ❌ Blocked | IP ban - transcripts empty |
+### Database Contents (20 nodes in knowledge_base.db)
+| Founder | Startup | Revenue | Tech Stack |
+|---------|---------|--------|-----------|
+| Steve | Journalable | $100K | - |
+| Floren | multiple online projects | - | - |
+| Ben | Follow Buddy | $17K | - |
+| Jonathan Fishner | Charardb | - | - |
+| Katie Keith | WordPress Plugins | - | ["WordPress", "WooCommerce"] |
+| Jordan | Jordan's app | - | - |
+| Marc Lou | Posture Mac OS app | $77K | - |
+| Umberto | Floa | - | - |
+| Evan | Locked | $14K | - |
+| Miquel | Late Social Media API | $40K | - |
+| Nick | Blocktoin | $16K | - |
+| Jeremy | Taskmagic | - | - |
+| Joseph | Super Demo | $250K | - |
+| Ivan | Lancer | $10K | - |
+| Thomas | Packager | $60K | - |
+| Ethan | My Niche Mobile App | $20K | - |
+| Maddox Schmidtoffer | Duckmath.org | $15K | - |
+| Flo | Monai | $35K | - |
+| Jacky Chow | Indexsy, Local Rank... | $12K | - |
+| Vikash | Bulk Mockup | $30K | - |
 
-### Files Created in Raw_Data (21 total)
-1. `D4fkiQfzw_I_How_I_Work_$77KMonth_Solopreneur.json`
-2. `iVy5J7iE-3Q_I_Spent_24_Hours_With_A_SaaS_Millionaire.json`
-3. `bq3-qH-CpYQ_I_Made_$1.5M_From_An_App_Youve_Never_Heard_Of.json`
-4. `PIXXEAfo6MY_My_Niche_Mobile_App_Makes_$20KMonth.json`
-5. `rGLXc1GmsaI_How_This_App_Makes_$35KMonth.json`
-6. `dWeoSKLt_fc_I'm_14_And_I_Built_A_$14KMonth_App.json`
-7. `DkmStHS8NP0_My_App_Made_$120K_in_24_Hours.json`
-8. `0pp4X58q_0s_I_Built_a_$100KMonth_Android_App.json`
-9. `spiC5m6AJNs_I_Make_$250KMonth_From_13_Businesses_(After_Losing.json`
-10. `4KfFB-dh71Y_I_Make_$17KMonth_With_One_Strategy.json`
-11. `LRX8TWC2hTM_I_Make_$60KMonth_From_the_Most_Boring_SaaS_on_the.json`
-12. `l4WEqPX52Cg_How_This_$250KMonth_SaaS_Got_Its_First_100_Users_(.json`
-13. `LKARRA0MvY4_I_Built_a_$10KMonth_SaaS_Using_Other_People's_Cust.json`
-14. `E_rX4JJrYkY_Zero_to_$40KMonth_With_One_Marketing_Channel_(No_S.json`
-15. `qIlX7cQ2UdU_I_Make_$15KMonth_From_One_Website.json`
-16. `7vz6b_Ohdl0_I_Built_a_Niche_App_to_$9K_MRR.json`
-17. `W48emwbUlUE_How_I_Built_a_$12KMonth_Micro-SaaS.json`
-18. `9sJ2R0rM3CA_I_Make_$150KMonth_From_20_Tiny_Apps.json`
-19. `hYF4fQYlrso_I_Make_$16KMonth..._Even_In_A_Tiny_Niche.json`
-20. `47QXbPGyzBI_I_Made_$500K_From_8_Different_Income_Streams.json`
-21-30. (Rows 22-31 metadata-only files with no transcripts)
+## How to Run (For New Sessions)
 
-## Critical Issue: YouTube IP Ban
-- **Problem**: YouTube blocking transcript API requests from current IP
-- **Cause**: Too many requests in short period
-- **Solution**: Wait 1-2 hours, then retry
-- **Affected**: Rows 22-31 have metadata but empty transcripts
+### Process New Transcripts
+```bash
+cd C:\Users\Atif Manzoor\Documents\Cortex
+python cortex\ingest_loop.py
+```
+
+### Query the Knowledge Base
+```bash
+python cortex\brain.py "What are the most common tech stacks for businesses making >$10k/month?"
+python cortex\brain.py "Show me all founders making over $50k/month"
+python cortex\brain.py "List all startups using React"
+```
+
+### Test Single Video Extraction
+```bash
+python cortex\extract.py
+# (Update json_path in script first)
+```
 
 ## Dependencies
 ```bash
-pip install yt-dlp openpyxl youtube-transcript-api
+pip install -r requirements.txt
+```
+**requirements.txt contents:**
+```
+openai>=1.0.0
+pydantic>=2.0.0
+python-dotenv>=1.0.0
 ```
 
-## Next Steps for New Session
+## Critical Implementation Details
 
-### Immediate (after IP ban clears):
-1. Retry transcripts for rows 22-31:
-   - Edit `ingest_links.py` to set row range: `if 22 <= i <= 31:`
-   - Run `python ingest_links.py`
-   - This will overwrite JSON files with transcript data
+### DeepSeek API
+- **Model**: `deepseek-chat` (cost-effective for budget)
+- **Key**: Stored in `.env` as `DEEPSEEK_API_KEY`
+- **Base URL**: `https://api.deepseek.com`
+- **Fallback**: Regex extraction if API fails
 
-### Continue Processing:
-2. Process next batch (rows 32-41):
-   - Edit `ingest_links.py`: `if 32 <= i <= 41:`
-   - Run `python ingest_links.py`
+### Conflict Resolution Logic
+1. Detects >10% revenue difference between existing and new nodes
+2. Detects tech stack changes (items added/removed)
+3. Flags **both** old and new nodes as `has_conflict=True`
+4. Links nodes via `conflict_with_node_id`
+5. Logs event to `cortex_logs.txt` with timestamps
 
-3. Continue in batches of 10 until all links processed
+### Self-Healing "Wow" Factor
+When a founder updates their revenue (e.g., $77K → $150K), Cortex:
+- Detects the conflict automatically
+- Preserves both data points (no data loss)
+- Flags them for human review
+- Logs the healing event with reasoning
 
-### Script Usage:
-- **Process specific rows**: Edit `ingest_links.py`, change line with `if X <= i <= Y:`
-- **Test single link**: Use `process_one.py` (update video_url and video_id variables)
-- **Excel auto-updates**: Status column (B) updates automatically
+## Known Issues & Limitations
+1. **Founder name extraction** ~80% accurate ("Floren" vs "Florin", "Umberto" vs "Umberto")
+2. **10 videos missing transcripts** (rows 22-31, YouTube IP ban - wait and retry)
+3. **Tech stack extraction** needs improvement (regex fallback weak)
+4. **Revenue from title only** (doesn't extract from transcript yet)
 
-## Key Technical Notes
-- Video ID extraction: Handles both `v=` and `be/` URL formats
-- Transcript preference: Manual transcript first, then auto-generated
-- yt-dlp used for metadata, youtube-transcript-api for transcripts
-- Excel reading: openpyxl, starts from row 2 (row 1 is header)
+## GitHub Repository
+**URL**: https://github.com/atifmanzoorali/Cortex
+**Branch**: main
+**Last Push**: 2026-05-01 (Cortex Brain module added)
 
-## Cortex Brain Module (Complete - 2026-05-01)
+## Next Steps for Improvement
+1. Get valid transcripts for rows 22-31 (wait for YouTube IP ban to clear)
+2. Improve LLM prompt for better founder name extraction
+3. Add more training examples to extraction prompt
+4. Test conflict resolution with sample conflicting data
+5. Add unit tests for conflict detection logic
 
-### Structure
-```
-cortex/
-├── __init__.py
-├── schema.py          # Pydantic models (KnowledgeNode)
-├── extract.py         # DeepSeek LLM extraction (deepseek-chat)
-├── db.py              # SQLite operations
-├── ingest_loop.py     # Raw_Data → Knowledge Nodes
-├── brain.py           # Natural language query engine
-├── conflict_resolver.py # Self-healing logic
-├── knowledge_base.db  # SQLite database (gitignored)
-└── cortex_logs.txt    # Conflict log (gitignored)
-```
-
-### Status - WORKING
-- ✅ Schema designed (KnowledgeNode with conflict flags)
-- ✅ LLM extraction (DeepSeek API `deepseek-chat` - API key working)
-- ✅ SQLite database (20 nodes inserted, 10 skipped with empty transcripts)
-- ✅ Ingestion loop (processes Raw_Data/*.json files)
-- ✅ Brain query engine (natural language → SQL conversion)
-- ✅ Conflict resolver (detects >10% revenue diff, flags both nodes, logs to cortex_logs.txt)
-- ✅ Revenue extraction working (Marc Lou $77K, Ben $17K, etc.)
-- ⚠️ Founder name extraction ~80% accurate ("Floren" vs "Florin", etc.)
-- ⚠️ 10 files skipped (rows 22-31 had empty transcripts due to YouTube IP ban)
-
-### Database Contents (20 nodes)
-| Founder | Startup | Revenue |
-|---------|---------|---------|
-| Steve | Journalable | $100K |
-| Floren | multiple online projects | - |
-| Ben | Follow Buddy | $17K |
-| Jonathan Fishner | Charardb | - |
-| Katie Keith | WordPress Plugins | - |
-| Jordan | Jordan's app | - |
-| Marc Lou | Posture Mac OS app | $77K |
-| Umberto | Floa | - |
-| Evan | Locked | $14K |
-| Miquel | Late Social Media API | $40K |
-| Nick | Blocktoin | $16K |
-| Jeremy | Taskmagic | - |
-| Joseph | Super Demo | $250K |
-| Ivan | Lancer | $10K |
-| Thomas | Packager | $60K |
-| Ethan | Cut Coach | $20K |
-| Maddox Schmidtoffer | Duckmath.org | $15K |
-| Flo | Monai | $35K |
-| Jacky Chow | Indexsy, Local Rank... | $12K |
-| Vikash | Bulk Mockup | $30K |
-
-### Query Examples
-```bash
-python cortex/brain.py "What are the most common tech stacks for businesses making >$10k/month?"
-python cortex/brain.py "Show me all founders making over $50k/month"
-python cortex/brain.py "List all startups using React"
-```
-
-### Resume Command
+## Resume Command (What to do in new session)
 ```bash
 cd C:\Users\Atif Manzoor\Documents\Cortex
-# Fix missing transcripts (rows 22-31), then:
-python cortex/ingest_loop.py
+# 1. Check if YouTube IP ban cleared, then:
+python ingest_links.py  # Re-process rows 22-31 for transcripts
+python cortex\ingest_loop.py  # Re-ingest with new transcripts
+
+# 2. Test queries:
+python cortex\brain.py "What startups make over $100k/month?"
 ```
